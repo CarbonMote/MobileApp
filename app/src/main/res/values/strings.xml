@@ -1,0 +1,16 @@
+<resources>
+    <string name="app_name">CarbonMoteApp</string>
+    <string name="title_home">Home</string>
+    <string name="title_dashboard">Dashboard</string>
+    <string name="title_notifications">Notifications</string>
+
+    <string name="stepCount_channel">step channel</string>
+    <string name="step_counter_distance">%1$.2f km</string>
+    <string name="steps">steps</string>
+    <string name="distance_walked">Distance Walked</string>
+
+    <plurals name="step_count">
+        <item quantity="one">%d step today</item>
+        <item quantity="other">%d steps today</item>
+    </plurals>
+</resources>
