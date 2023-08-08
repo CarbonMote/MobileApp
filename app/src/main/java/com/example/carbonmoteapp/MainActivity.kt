@@ -1,53 +1,88 @@
 package com.example.carbonmoteapp
 
-import android.content.Intent
+import android.Manifest
 import android.content.pm.PackageManager
+import android.location.Geocoder
+import android.location.Location
+import android.location.LocationListener
+import android.location.LocationManager
 import android.os.Build
 import android.os.Bundle
-import android.util.Log
 import android.view.Menu
-import android.view.MenuItem
+import android.widget.TextView
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.RequiresApi
-import com.google.android.material.bottomnavigation.BottomNavigationView
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
-import androidx.navigation.findNavController
-import androidx.navigation.ui.AppBarConfiguration
-import androidx.navigation.ui.setupActionBarWithNavController
-import androidx.navigation.ui.setupWithNavController
 import com.example.carbonmoteapp.databinding.ActivityMainBinding
-import com.example.carbonmoteapp.service.StepCounterService
+import java.util.Locale
 
 class MainActivity : AppCompatActivity() {
     private var TAG = "MainActivity"
+    var locationManager: LocationManager? = null
+    var deltaX:TextView? = null
+    var longitude:kotlin.Double = 0.0
+    var latitude:kotlin.Double = 0.0
+    var distance:kotlin.Double = 0.0
 
     private lateinit var binding: ActivityMainBinding
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        var geocoder: Geocoder = Geocoder(this, Locale.US)
+
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        val navView: BottomNavigationView = binding.navView
-
-        val navController = findNavController(R.id.nav_host_fragment_activity_main)
-        // Passing each menu ID as a set of Ids because each
-        // menu should be considered as top level destinations.
-        val appBarConfiguration = AppBarConfiguration(
-            setOf(
-                R.id.navigation_home, R.id.navigation_dashboard, R.id.navigation_notifications
-            )
-        )
-        setupActionBarWithNavController(navController, appBarConfiguration)
-        navView.setupWithNavController(navController)
-
-        startStepCounterService()
-
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             askForNotificationPermission()
+            askForLocationPermission()
         }
+        locationManager = getSystemService(LOCATION_SERVICE) as LocationManager
+
+        val locationListener = object : LocationListener {
+            override fun onLocationChanged(location: Location) {
+                // Update UI with new location information
+                val latitude = location.latitude
+                val longitude = location.longitude
+//                var address = findViewById<TextView>(R.id.id_address)
+                val lon = findViewById<TextView>(R.id.id_longitude)
+                val lat = findViewById<TextView>(R.id.id_latitude)
+                lat.text = "Latitude: $latitude"
+                lon.text = "Longitude: $longitude"
+                
+            }
+
+            override fun onStatusChanged(provider: String, status: Int, extras: Bundle?) {}
+            override fun onProviderEnabled(provider: String) {}
+            override fun onProviderDisabled(provider: String) {}
+        }
+
+        if (ActivityCompat.checkSelfPermission(
+                this,
+                Manifest.permission.ACCESS_FINE_LOCATION
+            ) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(
+                this,
+                Manifest.permission.ACCESS_COARSE_LOCATION
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
+            // TODO: Consider calling
+            //    ActivityCompat#requestPermissions
+            // here to request the missing permissions, and then overriding
+            //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
+            //                                          int[] grantResults)
+            // to handle the case where the user grants the permission. See the documentation
+            // for ActivityCompat#requestPermissions for more details.
+            return
+        }
+        locationManager!!.requestLocationUpdates(
+            LocationManager.GPS_PROVIDER,
+            1000,
+            1f,
+            locationListener
+        )
     }
 
     private val requestPermissionLauncher =
@@ -62,11 +97,14 @@ class MainActivity : AppCompatActivity() {
             requestPermissionLauncher.launch(notificationPermission)
         }
     }
-
-    private fun startStepCounterService() {
-        Log.d(TAG, "Attempting to start service")
-        val intent = Intent(this, StepCounterService::class.java)
-        ContextCompat.startForegroundService(this, intent)
+    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
+    private fun askForLocationPermission() {
+        val locationPermission = android.Manifest.permission.ACCESS_FINE_LOCATION
+        val notificationPermissionStatus = ContextCompat
+            .checkSelfPermission(this, locationPermission)
+        if (notificationPermissionStatus == PackageManager.PERMISSION_DENIED) {
+            requestPermissionLauncher.launch(locationPermission)
+        }
     }
 
     override fun onCreateOptionsMenu(menu: Menu?): Boolean {
