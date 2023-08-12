@@ -7,10 +7,12 @@
     android:layout_height="match_parent"
     android:paddingTop="?attr/actionBarSize">
 
+
     <com.mikhaellopez.circularprogressbar.CircularProgressBar
         android:id="@+id/circularProgressBar"
-        android:layout_width="200dp"
-        android:layout_height="200dp"
+        android:layout_width="300dp"
+        android:layout_height="300dp"
+        android:layout_marginTop="4dp"
         app:cpb_background_progressbar_color="#F2F2F2"
         app:cpb_background_progressbar_width="20dp"
         app:cpb_progress_direction="to_right"
@@ -18,41 +20,9 @@
         app:cpb_progressbar_width="15dp"
         app:cpb_round_border="false"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.497"
+        app:layout_constraintHorizontal_bias="0.495"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
-
-
-    <TextView
-        android:id="@+id/id_longitude"
-        android:layout_width="220dp"
-        android:layout_height="40dp"
-        android:layout_marginTop="180dp"
-        android:background="@color/teal_700"
-        android:gravity="center"
-        android:text="Longitude:"
-        android:textColor="@android:color/white"
-        android:textSize="18sp"
-        app:layout_constraintHorizontal_bias="0.497"
-        app:layout_constraintLeft_toLeftOf="parent"
-        app:layout_constraintRight_toRightOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/circularProgressBar" />
-
-    <TextView
-        android:id="@+id/id_latitude"
-        android:layout_width="220dp"
-        android:layout_height="40dp"
-        android:background="@color/teal_700"
-        android:gravity="center"
-        android:text="Latitude:"
-        android:textColor="@android:color/white"
-        android:textSize="18sp"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.497"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/id_longitude"
-        app:layout_constraintVertical_bias="0.0" />
 
     <TextView
         android:id="@+id/id_distance"
@@ -67,45 +37,32 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintHorizontal_bias="0.497"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/id_latitude"
         app:layout_constraintVertical_bias="0.14" />
-
-    <TextView
-        android:id="@+id/textView2"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginBottom="88dp"
-        android:text="/100"
-        app:layout_constraintBottom_toBottomOf="@+id/circularProgressBar"
-        app:layout_constraintEnd_toEndOf="@+id/circularProgressBar"
-        app:layout_constraintHorizontal_bias="0.537"
-        app:layout_constraintStart_toStartOf="@+id/circularProgressBar"
-        app:layout_constraintVertical_bias="0.0" />
 
     <TextView
         android:id="@+id/tv_stepsTaken"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
         android:text="0"
         android:textSize="40dp"
-        app:layout_constraintBottom_toBottomOf="@+id/circularProgressBar"
-        app:layout_constraintEnd_toEndOf="@+id/circularProgressBar"
-        app:layout_constraintHorizontal_bias="0.438"
-        app:layout_constraintStart_toStartOf="@+id/circularProgressBar"
-        app:layout_constraintTop_toTopOf="@+id/circularProgressBar"
-        app:layout_constraintVertical_bias="0.251" />
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.498"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/circularProgressBar" />
 
     <TextView
         android:id="@+id/editTextText"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="11dp"
+        android:layout_marginTop="28dp"
         android:inputType="text"
         android:text="Steps"
         android:textSize="18sp"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/textView2" />
+        app:layout_constraintHorizontal_bias="0.073"
+        app:layout_constraintStart_toEndOf="@+id/tv_stepsTaken"
+        app:layout_constraintTop_toTopOf="@+id/tv_stepsTaken" />
 
     <TextView
         android:id="@+id/carbonCredits"
@@ -113,22 +70,20 @@
         android:layout_height="wrap_content"
         android:text="0"
         android:textSize="98sp"
-        app:layout_constraintBottom_toTopOf="@+id/id_longitude"
+        app:layout_constraintBottom_toBottomOf="@+id/circularProgressBar"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.491"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/circularProgressBar"
-        app:layout_constraintVertical_bias="0.139" />
+        app:layout_constraintTop_toTopOf="@+id/circularProgressBar" />
 
     <TextView
         android:id="@+id/editTextText2"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginEnd="20dp"
+        android:layout_width="100dp"
+        android:layout_height="26dp"
         android:ems="10"
         android:inputType="text"
         android:text="Carbon Credits"
         app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/carbonCredits" />
 
     <Button

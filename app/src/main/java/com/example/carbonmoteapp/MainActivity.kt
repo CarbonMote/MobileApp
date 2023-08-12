@@ -24,27 +24,37 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import com.example.carbonmoteapp.databinding.ActivityMainBinding
+import retrofit2.Call
+import retrofit2.Callback
+import retrofit2.Response
+import retrofit2.Retrofit
+import retrofit2.converter.gson.GsonConverterFactory
 import java.util.Locale
 
 class MainActivity : AppCompatActivity(), SensorEventListener {
-    var locationManager: LocationManager? = null
-    var deltaX:TextView? = null
-    var distance: Double = 0.0
+    private var locationManager: LocationManager? = null
 
     private var sensorManager : SensorManager? = null
     private var running = false
     private var total_steps = 0f
     private var previousTotalSteps = 0f
 
+    private var distance: Double = 0.0
     var latitude: Double = 0.0
     var longitude: Double = 0.0
     private var startLatitude: Double = 0.0
     private var startLongitude: Double = 0.0
-//    private var endLatitude: Double = 0.0
-//    private var endLongitude: Double = 0.0
+    private var localCredits: Int = 0
 
     private val requestPermissionLauncher =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) {}
+
+    private val retrofit = Retrofit.Builder()
+        .baseUrl("YOUR_BASE_URL") // Replace with your Next.js server base URL
+        .addConverterFactory(GsonConverterFactory.create())
+        .build()
+
+    private val apiInterface = retrofit.create(ApiInterface::class.java)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -54,32 +64,14 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         val buttonStart = findViewById<Button>(R.id.button_start)
         buttonStart.setOnClickListener {
             if (!running) {
-                // Capture the start latitude and longitude
-                val locationManager = getSystemService(LOCATION_SERVICE) as LocationManager
-                val lastKnownLocation = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER)
-                if (lastKnownLocation != null) {
-                    startLatitude = lastKnownLocation.latitude
-                    startLongitude = lastKnownLocation.longitude
-                }
+                setStartPoint()
             }
-//            else {
-//                // Capture the end latitude and longitude
-//                val locationManager = getSystemService(LOCATION_SERVICE) as LocationManager
-//                val lastKnownLocation =
-//                    locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER)
-//                if (lastKnownLocation != null) {
-//                    endLatitude = lastKnownLocation.latitude
-//                    endLongitude = lastKnownLocation.longitude
-//                }
-//            }
-            running = !running // Toggle the "running" variable
-
+            running = !running
             updateButtonLabel(buttonStart) // Update button text
         }
 
         //Get Step sensor
         sensorManager = getSystemService(SENSOR_SERVICE) as SensorManager
-//        var geocoder: Geocoder = Geocoder(this, Locale.US)
 
         //Check for old data
         loadData()
@@ -117,20 +109,22 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
                     // Update UI with new location information
                     latitude = location.latitude
                     longitude = location.longitude
-                    val lon = findViewById<TextView>(R.id.id_longitude)
-                    val lat = findViewById<TextView>(R.id.id_latitude)
-                    val dist = findViewById<TextView>(R.id.id_distance)
-                    lat.text = "Latitude: $latitude"
-                    lon.text = "Longitude: $longitude"
 
-                    // Compare old and new values
-                    val latitudeDifference = latitude - startLatitude
-                    val longitudeDifference = longitude - startLongitude
-                    dist.text = "$latitudeDifference | $longitudeDifference"
+                    //Calculate Distance - Scale it for quick demo
+                    setDistance(DistanceCalculator.calculateDistance(startLatitude, startLongitude, latitude, longitude) * 100)
+
+                    //Update UI
+                    val dist = findViewById<TextView>(R.id.id_distance)
+                    val formattedDistance = String.format("Distance: %.4f Km", distance)
+                    dist.text = formattedDistance
+
+                    //Update progress and check for Credit issuance
+                    checkProgress(distance)
                 }
 
             }
 
+            @Deprecated("OnStatusChanged is deprecated or something idk")
             override fun onStatusChanged(provider: String, status: Int, extras: Bundle?) {}
             override fun onProviderEnabled(provider: String) {}
             override fun onProviderDisabled(provider: String) {}
@@ -138,7 +132,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
 
         locationManager!!.requestLocationUpdates(
             LocationManager.GPS_PROVIDER,
-            1000,
+            2000,
             1f,
             locationListener
         )
@@ -147,7 +141,6 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
 
     override fun onResume() {
         super.onResume()
-        running = true
         val stepSensor : Sensor? = sensorManager?.getDefaultSensor(Sensor.TYPE_STEP_COUNTER)
 
         Log.d("MainActivity", "OnResume, getting step sensor");
@@ -156,7 +149,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             Toast.makeText(this, "No sensor detected on this device", Toast.LENGTH_SHORT).show()
         }else{
             Log.d("MainActivity", "Got step sensor, registering sensor...");
-            sensorManager?.registerListener(this, stepSensor, SensorManager.SENSOR_DELAY_UI!!)
+            sensorManager?.registerListener(this, stepSensor, SensorManager.SENSOR_DELAY_UI)
         }
     }
 
@@ -168,40 +161,17 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             //Update display text
             val stepsTaken = findViewById<TextView>(R.id.tv_stepsTaken)
             stepsTaken.text = "$currentSteps"
-
-            //Update progress circular bar
-            val progressCircular = findViewById<com.mikhaellopez.circularprogressbar.CircularProgressBar>(R.id.circularProgressBar)
-            progressCircular.apply {
-               setProgressWithAnimation(currentSteps.toFloat())
-            }
         }
     }
 
-    private fun resetSteps(){
+    private fun resetSteps() {
+        total_steps = 0f
         val stepsTaken = findViewById<TextView>(R.id.tv_stepsTaken)
-        val progressCircular = findViewById<com.mikhaellopez.circularprogressbar.CircularProgressBar>(R.id.circularProgressBar)
-
-        //Check for single tap
-        stepsTaken.setOnClickListener { Toast.makeText(this, "Long Tap to Reset Steps", Toast.LENGTH_SHORT).show() }
-
-        //Check for long tap
-        stepsTaken.setOnLongClickListener {
-            previousTotalSteps = total_steps
-
-            //Reset steps
-            stepsTaken.text = 0.toString()
-
-            //Reset progress bar
-            progressCircular.apply {
-                setProgressWithAnimation(0f)
-            }
-
-            saveData()
-            true
-        }
+        stepsTaken.text = 0.toString()
     }
 
     private fun saveData(){
+        //Should write current values to the DB. - This should be called
         val sharedPreferences = getSharedPreferences("myPrefs", Context.MODE_PRIVATE)
         val editor  = sharedPreferences.edit()
         editor.putFloat("key1", previousTotalSteps)
@@ -209,6 +179,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     }
 
     private fun loadData(){
+        //Should load values from the DB - Should only be called once OnCreate
         val sharedPreferences = getSharedPreferences("myPrefs", Context.MODE_PRIVATE)
         val savedNumber = sharedPreferences.getFloat("key1", 0f)
         Log.d("MainActivity", "$savedNumber")
@@ -224,6 +195,109 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         } else {
             button.text = "Start"
         }
+    }
+
+    private fun issueCarbonCredit(){
+        //Update Local value the value
+        localCredits += 1
+        val carbonCredits = findViewById<TextView>(R.id.carbonCredits)
+        carbonCredits.text = "$localCredits"
+
+        //Save all data to the DB
+        saveData()
+    }
+    private fun checkProgress(distance : Double){
+        //If distance progress is maxed, then we need to issue credit then reset distance
+        if(distance >= 100){
+            issueCarbonCredit()
+            setStartPoint()
+            setDistance(0.0)
+
+            //reset progrss bar
+            val progressCircular = findViewById<com.mikhaellopez.circularprogressbar.CircularProgressBar>(R.id.circularProgressBar)
+            //Reset progress bar
+            progressCircular.apply {
+                setProgressWithAnimation(0f)
+            }
+        }else {
+
+            //Update progress circular bar
+            val progressCircular =
+                findViewById<com.mikhaellopez.circularprogressbar.CircularProgressBar>(R.id.circularProgressBar)
+            progressCircular.apply {
+                setProgressWithAnimation(distance.toFloat())
+            }
+        }
+    }
+
+    private fun setStartPoint(){
+        if (ActivityCompat.checkSelfPermission(
+                this,
+                Manifest.permission.ACCESS_FINE_LOCATION
+            ) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(
+                this,
+                Manifest.permission.ACCESS_COARSE_LOCATION
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
+            val locationPermission = Manifest.permission.ACCESS_FINE_LOCATION
+            val locationPermission2 = Manifest.permission.ACCESS_COARSE_LOCATION
+            requestPermissionLauncher.launch(locationPermission)
+            requestPermissionLauncher.launch(locationPermission2)
+        }
+        // Capture the start latitude and longitude
+        val locationManager = getSystemService(LOCATION_SERVICE) as LocationManager
+        val lastKnownLocation = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER)
+        if (lastKnownLocation != null) {
+            startLatitude = lastKnownLocation.latitude
+            startLongitude = lastKnownLocation.longitude
+        }
+    }
+
+    private fun setDistance(dist : Double){
+        distance = dist
+    }
+
+    private fun fetchData(id: Int?) {
+        val call = apiInterface.getData(id)
+        call.enqueue(object : Callback<List<DataDAO>> {
+            override fun onResponse(
+                call: Call<List<DataDAO>>,
+                response: Response<List<DataDAO>>
+            ) {
+                if (response.isSuccessful) {
+                    val data = response.body()
+                    // Process fetched data
+                } else {
+                    // Handle unsuccessful response
+                }
+            }
+
+            override fun onFailure(call: Call<List<DataDAO>>, t: Throwable) {
+                // Handle network error
+            }
+        })
+    }
+
+    private fun postData() {
+        val dataToPost = DataDAO(0, 10.0, 5, 15) // Replace with actual data
+        val call = apiInterface.postData(dataToPost)
+        call.enqueue(object : Callback<DataDAO> {
+            override fun onResponse(
+                call: Call<DataDAO>,
+                response: Response<DataDAO>
+            ) {
+                if (response.isSuccessful) {
+                    val postedData = response.body()
+                    Log.d("MainActivityDEBUG", "$postedData")
+                } else {
+                    // Handle unsuccessful response
+                }
+            }
+
+            override fun onFailure(call: Call<DataDAO>, t: Throwable) {
+                // Handle network error
+            }
+        })
     }
     @RequiresApi(Build.VERSION_CODES.TIRAMISU)
     private fun askForLocationPermission() {
