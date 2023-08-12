@@ -38,6 +38,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     private var running = false
     private var total_steps = 0f
     private var previousTotalSteps = 0f
+    private var dbData: DataDAO = DataDAO(0,0.0,0,0)
 
     private var distance: Double = 0.0
     var latitude: Double = 0.0
@@ -50,7 +51,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         registerForActivityResult(ActivityResultContracts.RequestPermission()) {}
 
     private val retrofit = Retrofit.Builder()
-        .baseUrl("YOUR_BASE_URL") // Replace with your Next.js server base URL
+        .baseUrl("https://carbon-mote-web-app.vercel.app/") // Replace with your Next.js server base URL
         .addConverterFactory(GsonConverterFactory.create())
         .build()
 
@@ -100,6 +101,16 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         ) {
             val activityPermission = Manifest.permission.ACTIVITY_RECOGNITION
             requestPermissionLauncher.launch(activityPermission)
+        }
+
+        //Ask for internet permission
+        if (ActivityCompat.checkSelfPermission(
+                this,
+                Manifest.permission.INTERNET
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
+            val internetPermission = Manifest.permission.INTERNET
+            requestPermissionLauncher.launch(internetPermission)
         }
 
         locationManager = getSystemService(LOCATION_SERVICE) as LocationManager
@@ -172,10 +183,16 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
 
     private fun saveData(){
         //Should write current values to the DB. - This should be called
+        //Save info locally
         val sharedPreferences = getSharedPreferences("myPrefs", Context.MODE_PRIVATE)
         val editor  = sharedPreferences.edit()
         editor.putFloat("key1", previousTotalSteps)
         editor.apply()
+
+        //Get current to append to it
+
+        //Save data to db
+        putData(distance, localCredits, localCredits)
     }
 
     private fun loadData(){
@@ -202,20 +219,21 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         localCredits += 1
         val carbonCredits = findViewById<TextView>(R.id.carbonCredits)
         carbonCredits.text = "$localCredits"
-
-        //Save all data to the DB
-        saveData()
     }
     private fun checkProgress(distance : Double){
         //If distance progress is maxed, then we need to issue credit then reset distance
         if(distance >= 100){
             issueCarbonCredit()
+
+            //Save all data to the DB
+            saveData()
+
+            //Reset Distance
             setStartPoint()
             setDistance(0.0)
 
             //reset progrss bar
             val progressCircular = findViewById<com.mikhaellopez.circularprogressbar.CircularProgressBar>(R.id.circularProgressBar)
-            //Reset progress bar
             progressCircular.apply {
                 setProgressWithAnimation(0f)
             }
@@ -257,8 +275,8 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         distance = dist
     }
 
-    private fun fetchData(id: Int?) {
-        val call = apiInterface.getData(id)
+    private fun fetchData() {
+        val call = apiInterface.getData(6)
         call.enqueue(object : Callback<List<DataDAO>> {
             override fun onResponse(
                 call: Call<List<DataDAO>>,
@@ -266,7 +284,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             ) {
                 if (response.isSuccessful) {
                     val data = response.body()
-                    // Process fetched data
+                    Log.d("MainActivityDEBUG", "-- $data")
                 } else {
                     // Handle unsuccessful response
                 }
@@ -278,9 +296,12 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         })
     }
 
-    private fun postData() {
-        val dataToPost = DataDAO(0, 10.0, 5, 15) // Replace with actual data
-        val call = apiInterface.postData(dataToPost)
+    private fun putData(dist: Double, buffCred: Int, totalCred: Int) {
+        //Just hard-coding the user ID because time and such
+        val generateduserID = 6;
+
+        val dataToPost = DataDAO(generateduserID, dist, buffCred, totalCred)
+        val call = apiInterface.putData(dataToPost)
         call.enqueue(object : Callback<DataDAO> {
             override fun onResponse(
                 call: Call<DataDAO>,
@@ -291,11 +312,14 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
                     Log.d("MainActivityDEBUG", "$postedData")
                 } else {
                     // Handle unsuccessful response
+                    val errorBody = response.errorBody()?.string()
+                    Log.d("MainActivityDEBUG", "Unsuccessful response, code: ${response.code()},  message: ${response.message()}, ErrorBody: $errorBody")
                 }
             }
 
             override fun onFailure(call: Call<DataDAO>, t: Throwable) {
                 // Handle network error
+                Log.d("MainActivityDEBUG", "API call failed with error: ${t.message}")
             }
         })
     }
